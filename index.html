@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Trip Manifest</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#12171f"><link rel="icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#eef0ee;--card:#fff;--tx:#14181f;--mut:#6b7280;--side:#12171f;--ac:#e0a040;--g:#2f6f5a;--r:#b5472f;--bd:#e3e5e3;--in:#f7f8f7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1117;--card:#171c24;--tx:#e8eaed;--mut:#9aa3af;--bd:#2a313b;--in:#10151c;--g:#5fc4a0;--r:#e8806a}}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font:14px system-ui,-apple-system,Segoe UI,sans-serif;display:flex}
+nav{width:220px;background:var(--side);color:#cfd4dc;padding:18px 12px;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+nav h1{font-size:16px;margin:0 8px 16px;color:#fff;letter-spacing:1px}nav h1 small{display:block;font-size:10px;color:#8a93a0;font-weight:400}
+nav a{padding:11px 12px;border-radius:8px;cursor:pointer;display:block}nav a.on{background:#1e2530;border-left:3px solid var(--ac);color:#fff}
+main{flex:1;padding:24px;overflow:auto;height:100%;min-width:0}
+h2{margin:0 0 18px;letter-spacing:1px;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.k{background:var(--card);border-radius:10px;padding:14px}.k span{font-size:10px;letter-spacing:1.5px;color:var(--mut);text-transform:uppercase}.k b{display:block;font-size:20px;margin-top:6px;font-family:ui-monospace,monospace}
+.card{background:var(--card);border-radius:12px;padding:18px;margin-bottom:18px}
+.card h3{margin:0 0 12px;font-size:14px;letter-spacing:1px;text-transform:uppercase}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label{font-size:10px;letter-spacing:1.2px;color:var(--mut);text-transform:uppercase;display:block;margin-bottom:4px}
+input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--in);color:var(--tx);font:inherit}
+input[readonly]{opacity:.7}.row{display:flex;gap:6px}.row button{width:40px}
+button{border:0;border-radius:8px;padding:10px 16px;background:var(--ac);color:#201400;font-weight:600;cursor:pointer}
+button.s{background:var(--in);color:var(--tx);border:1px solid var(--bd)}button.d{background:transparent;color:var(--r);border:1px solid var(--bd)}
+.tb{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}
+th{background:#12171f;color:#fff;font-size:10px;letter-spacing:1px;text-align:left;padding:10px}td{padding:10px;border-bottom:1px solid var(--bd)}
+.bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.bar input{flex:1;min-width:160px}.bar select{width:auto}
+.p{padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;cursor:pointer;border:0}.due{background:#f6dcd5;color:#8a2c18}.rec{background:#d6ebe2;color:#1f5a46}
+.g{color:var(--g)}.r{color:var(--r)}.note{font-size:12px;color:var(--mut);margin-top:8px}
+@media(max-width:760px){body{flex-direction:column-reverse}nav{width:100%;flex-direction:row;padding:6px;overflow-x:auto;gap:2px}nav h1{display:none}nav a{padding:10px 12px;font-size:12px;white-space:nowrap;border-left:0!important}nav a.on{border-bottom:3px solid var(--ac)}.sy{display:none}main{padding:14px}}
+</style></head><body>
+<nav id="nav"></nav><main id="m"></main>
+<script>
+const $=id=>document.getElementById(id),N=x=>+x||0,fm=x=>'₹'+(Math.round(N(x)*100)/100).toLocaleString('en-IN');
+let S={trips:[],extras:[],L:{tr:['Andal Logistics'],veh:['1982'],pt:['Sanikpur','Chiliyama','Bokaro']}};
+let sync='Connecting…',cache={trips:{},extras:{},lists:''},user=null;
+function setSy(t){sync=t;const e=document.querySelector('.sy');if(e)e.textContent=t}
+const er=e=>setSy('Sync error: '+(e.code||e.message));
+const save=()=>{if(!window.FB||!user)return;const {db,doc,setDoc,deleteDoc}=FB,b='users/'+user.uid+'/';
+for(const k of ['trips','extras']){const cur={};S[k].forEach(x=>cur[x.id]=JSON.stringify(x));
+for(const id in cur)if(cache[k][id]!==cur[id]){cache[k][id]=cur[id];setDoc(doc(db,b+k,String(id)),{json:cur[id]}).catch(er)}
+for(const id in cache[k])if(!(id in cur)){delete cache[k][id];deleteDoc(doc(db,b+k,id)).catch(er)}}
+const l=JSON.stringify(S.L);if(l!==cache.lists){cache.lists=l;setDoc(doc(db,b+'meta','lists'),{json:l}).catch(er)}};
+const rerender=()=>{if(!(page=='add'&&document.activeElement&&document.activeElement.tagName=='INPUT'))draw()};
+function startSync(u){user=u;const {db,doc,collection,onSnapshot}=FB,b='users/'+u.uid+'/';
+for(const k of ['trips','extras'])onSnapshot(collection(db,b+k),s=>{const a=[];cache[k]={};s.forEach(d=>{const j=d.data().json;cache[k][d.id]=j;a.push(JSON.parse(j))});S[k]=a;setSy(s.metadata.hasPendingWrites?'Saving…':s.metadata.fromCache?'Offline (will sync)':'Synced ✓');rerender()},er);
+onSnapshot(doc(db,b+'meta','lists'),s=>{if(s.exists()){cache.lists=s.data().json;S.L=JSON.parse(cache.lists)}rerender()},er)}
+let page='dash',edit=null,F={q:'',mo:'',st:''};
+const tabs=[['dash','Dashboard'],['add','Add Trip'],['trips','Trip Data'],['rec','Received'],['due','Due'],['ext','Extra Expenses']];
+const calc=t=>{t.sh=Math.max(0,N(t.wl)-N(t.wd));t.fa=N(t.wd)/1000*N(t.fr);t.sa=t.sh*N(t.sr);t.tds=N(t.dr)*0.02;t.te=t.sa+N(t.di)+N(t.dr)+t.tds+N(t.of);t.pf=t.fa-t.te;return t};
+const mon=d=>d?d.slice(0,7):'';const mname=k=>new Date(k+'-01').toLocaleString('en-IN',{month:'long',year:'numeric'});
+const go=p=>{page=p;if(p!='add')edit=null;draw()};
+function draw(){$('nav').innerHTML='<h1>TRIP MANIFEST<small>FLEET LEDGER</small></h1>'+tabs.map(t=>`<a class="${page==t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</a>`).join('')+`<a onclick="logout()">Logout</a><div class="sy" style="margin-top:auto;padding:8px 12px;font-size:11px;color:#8a93a0">${sync}</div>`;
+$('m').innerHTML=({dash,add,trips:()=>list('all'),rec:()=>list('Received'),due:()=>list('Due'),ext})[page]();if(page=='add')fc()}
+function dash(){const T=S.trips,fr=sum(T,'fa'),ex=sum(T,'te'),xe=S.extras.reduce((a,e)=>a+N(e.amt),0),pf=fr-ex,rc=sum(T.filter(t=>t.st=='Received'),'fa'),du=sum(T.filter(t=>t.st!='Received'),'fa');
+const ms={};T.forEach(t=>{const k=mon(t.ld)||'—';(ms[k]=ms[k]||{n:0,f:0,e:0,x:0});ms[k].n++;ms[k].f+=t.fa;ms[k].e+=t.te});S.extras.forEach(e=>{const k=mon(e.d)||'—';(ms[k]=ms[k]||{n:0,f:0,e:0,x:0});ms[k].x+=N(e.amt)});
+const ks=Object.keys(ms).sort().reverse(),mx=Math.max(1,...ks.map(k=>ms[k].f));
+return `<h2>Dashboard</h2><div class="grid">${[['Total trips',T.length],['Total freight',fm(fr)],['Trip expenses',fm(ex)],['Trip profit',fm(pf)],['Extra expenses',fm(xe)],['Net profit',fm(pf-xe)],['Received',fm(rc)],['Due',fm(du)]].map(k=>`<div class="k"><span>${k[0]}</span><b>${k[1]}</b></div>`).join('')}</div>
+<div class="card"><h3>Monthly profit summary</h3><div class="tb"><table><tr><th>Month<th>Trips<th>Freight<th>Trip exp.<th>Extra exp.<th>Net profit</tr>${ks.map(k=>{const m=ms[k],n=m.f-m.e-m.x;return `<tr><td><b>${k=='—'?k:mname(k)}</b><td>${m.n}<td>${fm(m.f)}<td>${fm(m.e)}<td>${fm(m.x)}<td class="${n<0?'r':'g'}">${fm(n)}`}).join('')||'<tr><td colspan=6>No data yet'}</table></div></div>
+<div class="card"><h3>Freight by month</h3>${ks.slice(0,8).reverse().map(k=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><span style="width:110px;font-size:12px">${k=='—'?k:mname(k)}</span><div style="height:14px;border-radius:4px;background:var(--ac);width:${ms[k].f/mx*100}%;min-width:2px"></div><span style="font-size:12px">${fm(ms[k].f)}</span></div>`).join('')||'No data'}</div>`}
+const sum=(a,k)=>a.reduce((s,t)=>s+N(t[k]),0);
+const sel=(id,k,v)=>`<div class="row"><select id="${id}">${S.L[k].map(o=>`<option ${o==v?'selected':''}>${o}</option>`).join('')}</select><button type="button" class="s" onclick="addOpt('${k}','${id}')">+</button></div>`;
+function addOpt(k,id){const v=prompt('Add new');if(v&&v.trim()){const cur=snap();S.L[k].push(v.trim());save();edit=cur;edit._tmp=1;draw();$(id).value=v.trim()}}
+const ids=['wl','wd','fr','sr','di','dr','of','ld','ud'];
+function snap(){const o={};['tr','veh','lp','up',...ids].forEach(i=>o[i]=$(i)?.value);o.id=edit?.id;return o}
+function add(){const t=edit||{};const v=(k,d='')=>t[k]??d;const n=(i,l,x)=>`<div><label>${l}</label><input id="${i}" type="number" step="any" placeholder="0.00" value="${v(i)}" oninput="fc()" ${x||''}></div>`;
+const ro=(i,l)=>`<div><label>${l}</label><input id="${i}" readonly></div>`;
+return `<h2>${t.id?'Edit trip':'Add trip'}</h2><div class="card"><h3>${t.id?'Edit trip entry':'New trip entry'}</h3><div class="f">
+<div><label>Transporter</label>${sel('tr','tr',v('tr'))}</div><div><label>Vehicle number</label>${sel('veh','veh',v('veh'))}</div>
+<div><label>Loading date</label><input id="ld" type="date" value="${v('ld')}"></div><div><label>Unloading date</label><input id="ud" type="date" value="${v('ud')}"></div>
+<div><label>Loading point</label>${sel('lp','pt',v('lp'))}</div><div><label>Unloading point</label>${sel('up','pt',v('up'))}</div>
+${n('wl','Weight loaded (kg)')}${n('wd','Weight delivered (kg)')}${ro('sh','Shortage (kg)')}
+${n('fr','Freight rate (₹ / ton)')}${ro('fa','Freight amount (₹)')}${n('sr','Shortage rate (₹ / kg)')}${ro('sa','Shortage amount (₹)')}
+${n('di','Diesel expense (₹)')}${n('dr','Driver advance / expense (₹)')}${ro('tds','TDS (auto: 2% of driver)')}${n('of','Office expense (₹)')}
+${ro('tot','Total expense (₹)')}${ro('pfv','Profit (₹)')}</div><p class="note">TDS is calculated automatically as 2% of the driver amount.</p>
+<button onclick="saveTrip()">${t.id?'Update trip':'Add trip'}</button> ${t.id?'<button class="s" onclick="go(\'trips\')">Cancel</button>':''}</div>`}
+function fc(){if(!$('wl'))return;const t=calc(Object.fromEntries(ids.map(i=>[i,$(i).value])));$('sh').value=t.sh.toFixed(2);$('fa').value=t.fa.toFixed(2);$('sa').value=t.sa.toFixed(2);$('tds').value=t.tds.toFixed(2);$('tot').value=t.te.toFixed(2);$('pfv').value=t.pf.toFixed(2)}
+function saveTrip(){if(!$('ld').value||!$('wd').value&&!$('wl').value)return alert('Enter loading date and weights');
+const t=calc({...snap(),st:edit?.st||'Due'});t.id=edit?.id||Date.now();if(edit?.id)S.trips=S.trips.map(x=>x.id==t.id?t:x);else S.trips.push(t);save();edit=null;go('trips')}
+function list(mode){const ms=[...new Set(S.trips.map(t=>mon(t.ld)))].sort().reverse();
+let T=S.trips.filter(t=>(mode=='all'||t.st==mode)&&(!F.mo||mon(t.ld)==F.mo)&&(mode!='all'||!F.st||t.st==F.st)&&(!F.q||[t.veh,t.tr,t.lp,t.up].join(' ').toLowerCase().includes(F.q.toLowerCase()))).sort((a,b)=>(b.ld||'').localeCompare(a.ld||''));
+const title={all:'Trip data',Received:'Received',Due:'Due'}[mode];
+return `<h2>${title}</h2><div class="grid"><div class="k"><span>Showing trips</span><b>${T.length}</b></div><div class="k"><span>Freight</span><b>${fm(sum(T,'fa'))}</b></div><div class="k"><span>Expenses</span><b>${fm(sum(T,'te'))}</b></div><div class="k"><span>Profit</span><b class="g">${fm(sum(T,'pf'))}</b></div></div>
+<div class="card"><h3>Trip records</h3><div class="bar"><input placeholder="Search vehicle, transporter, route…" value="${F.q}" oninput="F.q=this.value;keep(this)">
+<select onchange="F.mo=this.value;draw()"><option value="">All months<${'/'}option>${ms.map(m=>`<option value="${m}" ${F.mo==m?'selected':''}>${m?mname(m):'—'}</option>`).join('')}</select>
+${mode=='all'?`<select onchange="F.st=this.value;draw()"><option value="">All status</option><option ${F.st=='Due'?'selected':''}>Due</option><option ${F.st=='Received'?'selected':''}>Received</option></select>`:''}
+<button class="s" onclick="csv()">Export Excel</button><button class="d" onclick="F={q:'',mo:'',st:''};draw()">Reset</button></div>
+<div class="tb"><table><tr><th>Date<th>Vehicle<th>Route<th>Loaded<th>Delivered<th>Short<th>Freight<th>Short ₹<th>Diesel<th>Driver<th>TDS<th>Office<th>Total exp.<th>Profit<th>Status<th></tr>
+${T.map(t=>`<tr><td>${t.ld||''}<td>${t.veh}<td>${t.lp} → ${t.up}<td>${t.wl}<td>${t.wd}<td>${+t.sh.toFixed(2)}<td>${fm(t.fa)}<td>${fm(t.sa)}<td>${fm(t.di)}<td>${fm(t.dr)}<td>${fm(t.tds)}<td>${fm(t.of)}<td>${fm(t.te)}<td class="${t.pf<0?'r':'g'}">${fm(t.pf)}<td><button class="p ${t.st=='Due'?'due':'rec'}" onclick="tog(${t.id})">${t.st.toUpperCase()}</button><td><button class="s" onclick="ed(${t.id})">✎</button> <button class="d" onclick="del(${t.id})">🗑</button>`).join('')||'<tr><td colspan=16>No trips found'}</table></div></div>`}
+function keep(el){const p=el.selectionStart;draw();const i=document.querySelector('.bar input');i.focus();i.setSelectionRange(p,p)}
+const tog=id=>{const t=S.trips.find(x=>x.id==id);t.st=t.st=='Due'?'Received':'Due';save();draw()};
+const ed=id=>{edit=S.trips.find(x=>x.id==id);page='add';draw()};
+const del=id=>{if(confirm('Delete this trip?')){S.trips=S.trips.filter(x=>x.id!=id);save();draw()}};
+function dl(rows,name){const c=rows.map(r=>r.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv'}));a.download=name;a.click()}
+const csv=()=>dl([['Loading','Unloading','Transporter','Vehicle','From','To','Loaded','Delivered','Shortage','Freight','Shortage Rs','Diesel','Driver','TDS','Office','Total Exp','Profit','Status'],...S.trips.map(t=>[t.ld,t.ud,t.tr,t.veh,t.lp,t.up,t.wl,t.wd,t.sh,t.fa,t.sa,t.di,t.dr,t.tds,t.of,t.te,t.pf,t.st])],'trips.csv');
+const cats=['Toll','Tyre','Maintenance','Other'];
+function ext(){const E=[...S.extras].sort((a,b)=>b.d.localeCompare(a.d)),tot=E.reduce((a,e)=>a+N(e.amt),0);
+return `<h2>Extra expenses</h2><div class="grid"><div class="k"><span>Total extra expenses</span><b>${fm(tot)}</b></div>${cats.map(c=>`<div class="k"><span>${c}</span><b>${fm(E.filter(e=>e.c==c).reduce((a,e)=>a+N(e.amt),0))}</b></div>`).join('')}</div>
+<div class="card"><h3>Add expense (not linked to a trip)</h3><div class="f"><div><label>Date</label><input id="xd" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+<div><label>Category</label><select id="xc">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div><div><label>Vehicle (optional)</label><select id="xv"><option value="">All / general</option>${S.L.veh.map(v=>`<option>${v}</option>`).join('')}</select></div>
+<div><label>Amount (₹)</label><input id="xa" type="number" step="any" placeholder="0.00"></div><div><label>Note</label><input id="xn" placeholder="e.g. Rear tyre change"></div></div><br><button onclick="addX()">Add expense</button></div>
+<div class="card"><h3>Expense history</h3><div class="tb"><table><tr><th>Date<th>Category<th>Vehicle<th>Note<th>Amount<th></tr>${E.map(e=>`<tr><td>${e.d}<td>${e.c}<td>${e.v||'General'}<td>${e.n||''}<td>${fm(e.amt)}<td><button class="d" onclick="delX(${e.id})">🗑</button>`).join('')||'<tr><td colspan=6>Nothing added yet'}</table></div></div>`}
+function addX(){const a=N($('xa').value);if(!a||!$('xd').value)return alert('Enter date and amount');S.extras.push({id:Date.now(),d:$('xd').value,c:$('xc').value,v:$('xv').value,amt:a,n:$('xn').value});save();draw()}
+const delX=id=>{S.extras=S.extras.filter(e=>e.id!=id);save();draw()};
+draw();
+</script><div id="lg" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9"><div class="card" style="width:min(340px,92vw)"><h3>Trip Manifest – Sign in</h3><label>Email</label><input id="le" type="email" autocomplete="username"><br><br><label>Password</label><input id="lp2" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"><p id="lerr" class="r note"></p><button onclick="login()">Sign in</button></div></div>
+<script type="module">
+const V="10.14.1",G="https://www.gstatic.com/firebasejs/"+V+"/";
+const {initializeApp}=await import(G+"firebase-app.js");
+const {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}=await import(G+"firebase-auth.js");
+const {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,setDoc,deleteDoc,collection,onSnapshot}=await import(G+"firebase-firestore.js");
+const app=initializeApp({apiKey:"AIzaSyD8uK6pCf1PVGec2K62XkcImT-HZ0Rhcpo",authDomain:"trip-manifest-2a0be.firebaseapp.com",projectId:"trip-manifest-2a0be",storageBucket:"trip-manifest-2a0be.firebasestorage.app",messagingSenderId:"656287622830",appId:"1:656287622830:web:af362671314be0abffaf3f"});
+const auth=getAuth(app),db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+window.FB={db,doc,setDoc,deleteDoc,collection,onSnapshot};
+window.login=async()=>{try{document.getElementById('lerr').textContent='';await signInWithEmailAndPassword(auth,document.getElementById('le').value.trim(),document.getElementById('lp2').value)}catch(e){document.getElementById('lerr').textContent='Login failed: '+(e.code||e.message)}};
+window.logout=async()=>{await signOut(auth);location.reload()};
+let started=false;
+onAuthStateChanged(auth,u=>{if(u&&!started){started=true;document.getElementById('lg').style.display='none';startSync(u)}else if(!u)document.getElementById('lg').style.display='flex'});
+</script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
+</body></html>
